@@ -1,0 +1,4 @@
+requests
+xlsxwriter
+pandas
+numpy

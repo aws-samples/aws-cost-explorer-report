@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Parameters: 
+  SESSendFrom: 
+    Type: String
+    Description: "Email thats authorised in account for SES sending. Will not email if blank"
+  SESSendTo: 
+    Type: String
+    Description: "List of comma emails to send to"
+  SESRegion: 
+    Type: String
+    Default: "us-east-1"
+    Description: "Region you have configured SES in (Default us-east-1)"
+  S3Bucket: 
+    Type: String
+    Description: "S3 Bucket to store the report in"
+  AccountLabel: 
+    Type: String
+    Default: Email
+    Description: "Email or Name, default is Email"
+  ListOfCostTags: 
+    Type: String
+    Description: "Comma seperated list of all Cost Allocation Tags"
+
+Resources:
+  CostExplorerReport:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: CostExplorerReportLambda
+      Description: "Function for generating / sending monthly cost report"
+      MemorySize: 256
+      Timeout: 60
+      Handler: lambda.main_handler
+      Runtime: python3.6
+      CodeUri: ../bin/lambda.zip
+      Role: !GetAtt CostExplorerReportLambdaIAMRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Table
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3Bucket
+          SES_SEND: !Ref SESSendTo
+          SES_FROM: !Ref SESSendFrom
+          SES_REGION: !Ref SESRegion
+          COST_TAGS: !Ref ListOfCostTags
+          ACCOUNT_LABEL: !Ref AccountLabel
+      Events:
+        MonthlyEvent: # Run at 1am UTC, 1st of month
+          Properties:
+            Schedule: cron(0 1 1 * ? *)
+          Type: Schedule
+  
+  CostExplorerReportLambdaIAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+        Path: "/"
+        ManagedPolicyArns: #This policy is for Lambda invoke / logging
+          - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        Policies: 
+          - 
+            PolicyName: "root"
+            PolicyDocument: 
+              Version: "2012-10-17"
+              Statement:
+                -  #Policy to allow CostExplorerAPI
+                  Effect: "Allow"
+                  Action:
+                    - ce:*
+                  Resource: "*"
+                -  #Policy to allow Organizations Listing
+                  Effect: "Allow"
+                  Action:
+                    - organizations:ListAccounts
+                  Resource: "*"
+                - #Policy to allow SES sending
+                  Effect: "Allow"
+                  Action:
+                    - ses:SendEmail
+                    - ses:SendRawEmail
+                  Resource: "*"
+                - #Policy to allow storing S3 file
+                  Effect: Allow
+                  Action:
+                    - s3:PutObject
+                    - s3:PutObjectAcl
+                  Resource: !Sub arn:aws:s3:::${S3Bucket}/*
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            -
+              Sid: "AllowLambdaServiceToAssumeRole"
+              Effect: "Allow"
+              Action: 
+                - "sts:AssumeRole"
+              Principal:
+                Service: 
+                  - "lambda.amazonaws.com"
+  
