@@ -43,7 +43,7 @@ And then run deploy.sh
 2. Create a lambda IAM execution role with ce:, ses:, s3:, organizations:ListAccounts
 3. Upload code as zip bin/lambda.zip
 4. Update ENV Variables in Lambda console  
-  S3_BUCKET: S3 Bucket to use
+  S3_BUCKET: S3 Bucket to use  
   SES_SEND: Email list to send to (comma separated)  
   SES_FROM: SES Verified Sender Email  
   SES_REGION: SES Region  
