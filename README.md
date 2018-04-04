@@ -19,6 +19,9 @@ awscli - https://aws.amazon.com/cli/
 
 configure AWS credentials for target account  
 `aws configure` 
+
+Verfied SES Sender Email
+https://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-email-addresses.html
  
 Docker (optional for building the lambda python package with updated https://pypi.python.org/ third-party libraries)
 
