@@ -62,7 +62,11 @@ class CostExplorer:
         self.end = (datetime.date.today().replace(day=25) + datetime.timedelta(days=14)).replace(day=1) - datetime.timedelta(days=1) #last day of this month
         self.riend = datetime.date.today()
         self.start = (self.end - year) + datetime.timedelta(days=1) #1st day of month 12 months ago
-        self.accounts = self.getAccounts()
+        try:
+            self.accounts = self.getAccounts()
+        except:
+            logging.exception("Getting Account names failed")
+            self.accounts = {}
         
     def getAccounts(self):
         accounts = {}
