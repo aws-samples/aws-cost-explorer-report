@@ -9,10 +9,11 @@ Python SAM Lambda module for generating an Excel cost report with graphs, includ
 This sample code is made available under a modified MIT license. See the LICENSE file.
 
 ## AWS Costs
-Lambda Invocation (Usually Free)  
-SES (Usually Free)  
-Minimal S3 Usage  
-Cost Explorer at 0.01c per API call (about 24c per run)
+AWS Lambda Invocation (Usually Free https://aws.amazon.com/free/)  
+Amazon SES (Usually Free https://aws.amazon.com/free/)  
+Minimal Amazon S3 Usage  
+AWS Cost Explorer API at 0.01c per API call (about 24c per run)  
+https://aws.amazon.com/aws-cost-management/pricing/
 
 ## Prerequisites
 awscli - https://aws.amazon.com/cli/  
@@ -20,14 +21,14 @@ awscli - https://aws.amazon.com/cli/
 configure AWS credentials for target account  
 `aws configure` 
 
-Verfied SES Sender Email
+Verfied Amazon SES Sender email  
 https://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-email-addresses.html
  
 Docker (optional for building the lambda python package with updated https://pypi.python.org/ third-party libraries)
 
 ## Building (Optional, or use the prebuilt zip in /bin)
 Run build.sh to build a new lambda deployment package.
-This requires Docker, as it builds the package in an amazon linux container.
+This requires Docker, as it builds the package in an Amazon Linux container.
 
 `sh build.sh`
 
