@@ -2,7 +2,7 @@
 
 Python SAM Lambda module for generating an Excel cost report with graphs, including month on month cost changes. Uses the AWS Cost Explorer API for data.
 
-![screenshot](https://github.com/aws-samples/aws-cost-explorer-report/screenshot.png)
+![screenshot](https://github.com/aws-samples/aws-cost-explorer-report/blob/master/screenshot.png)
 
 ## License Summary
 
