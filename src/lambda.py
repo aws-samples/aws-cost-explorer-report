@@ -59,10 +59,9 @@ class CostExplorer:
         self.reports = []
         self.client = boto3.client('ce', region_name='us-east-1')
         year = datetime.timedelta(days=365)
-        self.end = (datetime.date.today().replace(day=25) + datetime.timedelta(days=14)).replace(day=1) - datetime.timedelta(days=1)
+        self.end = (datetime.date.today().replace(day=25) + datetime.timedelta(days=14)).replace(day=1) - datetime.timedelta(days=1) #last day of this month
         self.riend = datetime.date.today()
-        self.start = self.end - year
-        self.ristart = self.riend - year
+        self.start = (self.end - year) + datetime.timedelta(days=1) #1st day of month 12 months ago
         self.accounts = self.getAccounts()
         
     def getAccounts(self):
@@ -80,7 +79,7 @@ class CostExplorer:
         results = []
         response = self.client.get_reservation_coverage(
             TimePeriod={
-                'Start': self.ristart.isoformat(),
+                'Start': self.start.isoformat(),
                 'End': self.riend.isoformat()
             },
             Granularity='MONTHLY'
@@ -90,7 +89,7 @@ class CostExplorer:
             nextToken = response['nextToken']
             response = self.client.get_reservation_coverage(
                 TimePeriod={
-                    'Start': self.ristart.isoformat(),
+                    'Start': self.start.isoformat(),
                     'End': self.riend.isoformat()
                 },
                 Granularity='MONTHLY',
@@ -159,7 +158,7 @@ class CostExplorer:
             for i in v['Groups']:
                 key = i['Keys'][0]
                 if key in self.accounts:
-                    key = self.accounts[key]['Email']
+                    key = self.accounts[key][ACCOUNT_LABEL]
                 row.update({key:float(i['Metrics']['UnblendedCost']['Amount'])}) 
             if not v['Groups']:
                 row.update({'Total':float(v['Total']['UnblendedCost']['Amount'])})
@@ -254,6 +253,7 @@ def main_handler(event=None, context=None):
             tabname = tagkey.replace(":",".") #Remove special chars from Excel tabname
             costexplorer.addReport(Name="{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Total')
             costexplorer.addReport(Name="Change-{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Change')
+    costexplorer.generateExcel()
     return "Report Generated"
 
 if __name__ == '__main__':
