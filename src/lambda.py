@@ -266,6 +266,8 @@ def main_handler(event=None, context=None):
     #Default addReport has filter to remove Credits / Refunds / UpfrontRI
     costexplorer.addReport(Name="Total", GroupBy=[],Style='Total')
     costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
+    costexplorer.addReport(Name="TotalInclCredits", GroupBy=[],Style='Total',NoCredits=False)
+    costexplorer.addReport(Name="TotalInclCreditsChange", GroupBy=[],Style='Change',NoCredits=False)
     costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
     costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
 
