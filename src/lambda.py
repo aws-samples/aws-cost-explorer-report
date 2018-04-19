@@ -118,19 +118,36 @@ class CostExplorer:
         self.reports.append({'Name':Name,'Data':df})
             
         
-    def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], Style='Total'):
+    def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], Style='Total', NoCredits=True, CreditsOnly=False):
         results = []
-        response = self.client.get_cost_and_usage(
-            TimePeriod={
-                'Start': self.start.isoformat(),
-                'End': self.end.isoformat()
-            },
-            Granularity='MONTHLY',
-            Metrics=[
-                'UnblendedCost',
-            ],
-            GroupBy=GroupBy
-        )
+        if not NoCredits:
+            response = self.client.get_cost_and_usage(
+                TimePeriod={
+                    'Start': self.start.isoformat(),
+                    'End': self.end.isoformat()
+                },
+                Granularity='MONTHLY',
+                Metrics=[
+                    'UnblendedCost',
+                ],
+                GroupBy=GroupBy
+            )
+        else:
+            Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund"]}}}
+            if CreditsOnly:
+                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund"]}}
+            response = self.client.get_cost_and_usage(
+                TimePeriod={
+                    'Start': self.start.isoformat(),
+                    'End': self.end.isoformat()
+                },
+                Granularity='MONTHLY',
+                Metrics=[
+                    'UnblendedCost',
+                ],
+                GroupBy=GroupBy,
+                Filter=Filter
+            )
 
         if response:
             results.extend(response['ResultsByTime'])
@@ -243,7 +260,9 @@ class CostExplorer:
 
 def main_handler(event=None, context=None): 
     costexplorer = CostExplorer()
+    #Default addReport has filter to remove Credits / Refunds
     costexplorer.addReport(Name="Total", GroupBy=[],Style='Total')
+    costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
     costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
     costexplorer.addRiReport(Name="RICoverage")
     costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total')
