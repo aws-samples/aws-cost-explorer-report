@@ -118,7 +118,8 @@ class CostExplorer:
         self.reports.append({'Name':Name,'Data':df})
             
         
-    def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], Style='Total', NoCredits=True, CreditsOnly=False):
+    def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], 
+    Style='Total', NoCredits=True, CreditsOnly=False, UpfrontOnly=False):
         results = []
         if not NoCredits:
             response = self.client.get_cost_and_usage(
@@ -136,6 +137,8 @@ class CostExplorer:
             Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund"]}}}
             if CreditsOnly:
                 Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund"]}}
+            if UpfrontOnly:
+                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
             response = self.client.get_cost_and_usage(
                 TimePeriod={
                     'Start': self.start.isoformat(),
@@ -262,8 +265,9 @@ def main_handler(event=None, context=None):
     costexplorer = CostExplorer()
     #Default addReport has filter to remove Credits / Refunds
     costexplorer.addReport(Name="Total", GroupBy=[],Style='Total')
-    costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
     costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
+    costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
+    costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
     costexplorer.addRiReport(Name="RICoverage")
     costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total')
     costexplorer.addReport(Name="ServicesChange", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Change')
