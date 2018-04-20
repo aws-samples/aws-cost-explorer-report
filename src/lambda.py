@@ -34,6 +34,8 @@ import os
 import datetime
 import logging
 import pandas as pd
+#For date
+from dateutil.relativedelta import relativedelta
 #For email
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -59,9 +61,9 @@ class CostExplorer:
         self.reports = []
         self.client = boto3.client('ce', region_name='us-east-1')
         year = datetime.timedelta(days=365)
-        self.end = (datetime.date.today().replace(day=25) + datetime.timedelta(days=14)).replace(day=1) - datetime.timedelta(days=1) #last day of this month
+        self.end = datetime.date.today().replace(day=1) - datetime.timedelta(days=1) # last day of last month
         self.riend = datetime.date.today()
-        self.start = (self.end - year) + datetime.timedelta(days=1) #1st day of month 12 months ago
+        self.start = (datetime.date.today() - relativedelta(months=+11)).replace(day=1) #1st day of month 11 months ago
         try:
             self.accounts = self.getAccounts()
         except:
