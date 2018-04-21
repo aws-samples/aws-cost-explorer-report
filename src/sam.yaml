@@ -21,6 +21,9 @@ Parameters:
   ListOfCostTags: 
     Type: String
     Description: "Comma seperated list of all Cost Allocation Tags"
+  CurrentMonth:
+    Type: String
+    Description: "true | false for if current partial month included"
 
 Resources:
   CostExplorerReport:
@@ -45,6 +48,7 @@ Resources:
           SES_REGION: !Ref SESRegion
           COST_TAGS: !Ref ListOfCostTags
           ACCOUNT_LABEL: !Ref AccountLabel
+          CURRENT_MONTH: !Ref CurrentMonth
       Events:
         MonthlyEvent: # Run at 1am UTC, 4th of month (give bills a chance to finalise)
           Properties:
