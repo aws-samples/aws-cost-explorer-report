@@ -46,9 +46,9 @@ Resources:
           COST_TAGS: !Ref ListOfCostTags
           ACCOUNT_LABEL: !Ref AccountLabel
       Events:
-        MonthlyEvent: # Run at 1am UTC, 1st of month
+        MonthlyEvent: # Run at 1am UTC, 4th of month (give bills a chance to finalise)
           Properties:
-            Schedule: cron(0 1 1 * ? *)
+            Schedule: cron(0 1 4 * ? *)
           Type: Schedule
   
   CostExplorerReportLambdaIAMRole:
