@@ -34,6 +34,8 @@ import os
 import datetime
 import logging
 import pandas as pd
+#For date
+from dateutil.relativedelta import relativedelta
 #For email
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -47,6 +49,12 @@ if not SES_REGION:
 ACCOUNT_LABEL = os.environ.get('ACCOUNT_LABEL')
 if not ACCOUNT_LABEL:
     ACCOUNT_LABEL = 'Email'
+    
+CURRENT_MONTH = os.environ.get('CURRENT_MONTH')
+if CURRENT_MONTH == "true":
+    CURRENT_MONTH = True
+else:
+    CURRENT_MONTH = False
 
 class CostExplorer:
     """Retrieves BillingInfo checks from CostExplorer API
@@ -54,14 +62,16 @@ class CostExplorer:
     >>> costexplorer.addReport(GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}])
     >>> costexplorer.generateExcel()
     """    
-    def __init__(self):
+    def __init__(self, CurrentMonth=False):
         #Array of reports ready to be output to Excel.
         self.reports = []
         self.client = boto3.client('ce', region_name='us-east-1')
-        year = datetime.timedelta(days=365)
-        self.end = (datetime.date.today().replace(day=25) + datetime.timedelta(days=14)).replace(day=1) - datetime.timedelta(days=1) #last day of this month
+        self.end = datetime.date.today().replace(day=1) - datetime.timedelta(days=1) # last day of last month
         self.riend = datetime.date.today()
-        self.start = (self.end - year) + datetime.timedelta(days=1) #1st day of month 12 months ago
+        if CurrentMonth or CURRENT_MONTH:
+            self.end = self.riend
+        self.start = (datetime.date.today() - relativedelta(months=+12)).replace(day=1) #1st day of month 11 months ago
+        self.ristart = (datetime.date.today() - relativedelta(months=+11)).replace(day=1) #1st day of month 11 months ago
         try:
             self.accounts = self.getAccounts()
         except:
@@ -83,7 +93,7 @@ class CostExplorer:
         results = []
         response = self.client.get_reservation_coverage(
             TimePeriod={
-                'Start': self.start.isoformat(),
+                'Start': self.ristart.isoformat(),
                 'End': self.riend.isoformat()
             },
             Granularity='MONTHLY'
@@ -93,7 +103,7 @@ class CostExplorer:
             nextToken = response['nextToken']
             response = self.client.get_reservation_coverage(
                 TimePeriod={
-                    'Start': self.start.isoformat(),
+                    'Start': self.ristart.isoformat(),
                     'End': self.riend.isoformat()
                 },
                 Granularity='MONTHLY',
@@ -221,15 +231,18 @@ class CostExplorer:
             
             # Create a chart object.
             chart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
-
+            
+            chartend=12
+            if CURRENT_MONTH:
+                chartend=13
             for row_num in range(1, len(report['Data']) + 1):
                 chart.add_series({
                     'name':       [report['Name'], row_num, 0],
-                    'categories': [report['Name'], 0, 1, 0, 12],
-                    'values':     [report['Name'], row_num, 1, row_num, 12],
+                    'categories': [report['Name'], 0, 1, 0, chartend],
+                    'values':     [report['Name'], row_num, 1, row_num, chartend],
                 })
             
-            worksheet.insert_chart('N2', chart)
+            worksheet.insert_chart('O2', chart)
         writer.save()
         
         #Time to deliver the file to S3
@@ -262,7 +275,7 @@ class CostExplorer:
 
 
 def main_handler(event=None, context=None): 
-    costexplorer = CostExplorer()
+    costexplorer = CostExplorer(CurrentMonth=False)
     #Default addReport has filter to remove Credits / Refunds / UpfrontRI
     costexplorer.addReport(Name="Total", GroupBy=[],Style='Total')
     costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
