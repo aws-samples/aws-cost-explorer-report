@@ -54,7 +54,7 @@ And then run deploy.sh
 ## Deploy Manually (Lambda Console)
 1. Create a lambda function (python 3.6 runtime)
 2. Create a lambda IAM execution role with ce:, ses:, s3:, organizations:ListAccounts
-3. Upload code as zip bin/lambda.zip
+3. Upload zip to console from https://s3.amazonaws.com/aws-cost-explorer-report-bin/lambda.zip
 4. Update ENV Variables in Lambda console  
   S3_BUCKET: S3 Bucket to use  
   SES_SEND: Email list to send to (comma separated)  
