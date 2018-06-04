@@ -71,7 +71,7 @@ class CostExplorer:
         self.reports = []
         if not AWS_PROFILE:
             session = boto3.Session(profile_name=AWS_PROFILE)
-            client = session.client('ce', region_name=AWS_DEFAULT_REGION)
+            self.client = session.client('ce', region_name=AWS_DEFAULT_REGION)
         else : 
             self.client = boto3.client('ce', region_name=AWS_DEFAULT_REGION)
         self.end = datetime.date.today().replace(day=1) - datetime.timedelta(days=1) # last day of last month

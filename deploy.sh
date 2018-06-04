@@ -1,6 +1,7 @@
 #!/bin/bash
 #Suggest deploying to us-east-1 due to CE API, and SES
 export AWS_DEFAULT_REGION=us-east-1
+#Set to enable using a profile different than default ( aws configure --profile yourbillingprofile )
 export AWS_PROFILE=yourbillingprofile
 #Change the below, an s3 bucket to store lambda code for deploy, and output report
 #Must be in same region as lambda (ie AWS_DEFAULT_REGION)
@@ -22,15 +23,36 @@ fi
 cd src
 zip -ur ../bin/lambda.zip lambda.py
 cd ..
-aws cloudformation package \
+
+if [ -z "$AWS_PROFILE" ];
+then
+  aws cloudformation package \
    --template-file src/sam.yaml \
    --output-template-file deploy.sam.yaml \
    --s3-bucket $BUCKET \
-   --s3-prefix aws-cost-explorer-report-builds
-aws cloudformation deploy \
-  --template-file deploy.sam.yaml \
-  --stack-name aws-cost-explorer-report \
-  --capabilities CAPABILITY_IAM \
-  --parameter-overrides SESSendFrom=$SES_FROM S3Bucket=$BUCKET \
-  SESSendTo=$SES_TO SESRegion=$SES_REGION \
-  AccountLabel=Email ListOfCostTags=$COST_TAGS CurrentMonth=$CURRENT_MONTH
+   --s3-prefix aws-cost-explorer-report-builds \
+   --profile $AWS_PROFILE
+  aws cloudformation deploy \
+    --template-file deploy.sam.yaml \
+    --stack-name aws-cost-explorer-report \
+    --capabilities CAPABILITY_IAM \
+    --parameter-overrides SESSendFrom=$SES_FROM S3Bucket=$BUCKET \
+    SESSendTo=$SES_TO SESRegion=$SES_REGION \
+    AccountLabel=Email ListOfCostTags=$COST_TAGS CurrentMonth=$CURRENT_MONTH \\
+    --profile $AWS_PROFILE
+else
+  aws cloudformation package \
+    --template-file src/sam.yaml \
+    --output-template-file deploy.sam.yaml \
+    --s3-bucket $BUCKET \
+    --s3-prefix aws-cost-explorer-report-builds
+  aws cloudformation deploy \
+    --template-file deploy.sam.yaml \
+    --stack-name aws-cost-explorer-report \
+    --capabilities CAPABILITY_IAM \
+    --parameter-overrides SESSendFrom=$SES_FROM S3Bucket=$BUCKET \
+    SESSendTo=$SES_TO SESRegion=$SES_REGION \
+    AccountLabel=Email ListOfCostTags=$COST_TAGS CurrentMonth=$CURRENT_MONTH
+fi
+
+
