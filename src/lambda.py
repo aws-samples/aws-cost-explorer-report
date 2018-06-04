@@ -93,8 +93,8 @@ class CostExplorer:
             client = session.client('organizations', region_name=AWS_DEFAULT_REGION)
         else : 
             client = boto3.client('organizations', region_name=AWS_DEFAULT_REGION)
-            paginator = client.get_paginator('list_accounts')
-            response_iterator = paginator.paginate()
+        paginator = client.get_paginator('list_accounts')
+        response_iterator = paginator.paginate()
         for response in response_iterator:
             for acc in response['Accounts']:
                 accounts[acc['Id']] = acc
