@@ -1,6 +1,7 @@
 #!/bin/bash
 #Suggest deploying to us-east-1 due to CE API, and SES
-export AWS_DEFAULT_REGION=us-east-1 
+export AWS_DEFAULT_REGION=us-east-1
+export AWS_PROFILE=yourbillingprofile
 #Change the below, an s3 bucket to store lambda code for deploy, and output report
 #Must be in same region as lambda (ie AWS_DEFAULT_REGION)
 export BUCKET=changeme
