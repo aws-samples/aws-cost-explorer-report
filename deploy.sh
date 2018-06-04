@@ -24,7 +24,7 @@ cd src
 zip -ur ../bin/lambda.zip lambda.py
 cd ..
 
-if [ -z "$AWS_PROFILE" ];
+if [ -z "$AWS_BILLINGPROFILE" ];
 then
   aws cloudformation package \
    --template-file src/sam.yaml \
