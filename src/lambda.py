@@ -44,7 +44,7 @@ from email.utils import COMMASPACE, formatdate
 
 #GLOBALS
 SES_REGION = os.environ.get('SES_REGION')
-AWS_PROFILE = os.environ.get('AWS_PROFILE')
+AWS_BILLINGPROFILE = os.environ.get('AWS_BILLINGPROFILE')
 AWS_DEFAULT_REGION = os.environ.get('AWS_DEFAULT_REGION')
 if not AWS_DEFAULT_REGION:
     AWS_DEFAULT_REGION="us-east-1"
@@ -69,8 +69,8 @@ class CostExplorer:
     def __init__(self, CurrentMonth=False):
         #Array of reports ready to be output to Excel.
         self.reports = []
-        if not AWS_PROFILE:
-            session = boto3.Session(profile_name=AWS_PROFILE)
+        if not AWS_BILLINGPROFILE:
+            session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
             self.client = session.client('ce', region_name=AWS_DEFAULT_REGION)
         else : 
             self.client = boto3.client('ce', region_name=AWS_DEFAULT_REGION)
@@ -88,8 +88,8 @@ class CostExplorer:
         
     def getAccounts(self):
         accounts = {}
-        if not AWS_PROFILE:
-            session = boto3.Session(profile_name=AWS_PROFILE)
+        if not AWS_BILLINGPROFILE:
+            session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
             client = session.client('organizations', region_name=AWS_DEFAULT_REGION)
         else : 
             client = boto3.client('organizations', region_name=AWS_DEFAULT_REGION)
@@ -259,8 +259,8 @@ class CostExplorer:
         
         #Time to deliver the file to S3
         if os.environ.get('S3_BUCKET'):
-            if not AWS_PROFILE:
-                session = boto3.Session(profile_name=AWS_PROFILE)
+            if not AWS_BILLINGPROFILE:
+                session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
                 s3 = session.client('s3', region_name=AWS_DEFAULT_REGION)
             else : 
                 s3 = boto3.client('s3')
@@ -282,8 +282,8 @@ class CostExplorer:
             part['Content-Disposition'] = 'attachment; filename="%s"' % "cost_explorer_report.xlsx"
             msg.attach(part)
             #SES Sending
-            if not AWS_PROFILE:
-                session = boto3.Session(profile_name=AWS_PROFILE)
+            if not AWS_BILLINGPROFILE:
+                session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
                 ses = session.client('ses', region_name=SES_REGION)
             else : 
                 ses = boto3.client('ses', region_name=SES_REGION)

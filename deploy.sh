@@ -2,7 +2,7 @@
 #Suggest deploying to us-east-1 due to CE API, and SES
 export AWS_DEFAULT_REGION=us-east-1
 #Set to enable using a profile different than default ( aws configure --profile yourbillingprofile )
-export AWS_PROFILE=yourbillingprofile
+export AWS_BILLINGPROFILE=yourbillingprofile
 #Change the below, an s3 bucket to store lambda code for deploy, and output report
 #Must be in same region as lambda (ie AWS_DEFAULT_REGION)
 export BUCKET=changeme
