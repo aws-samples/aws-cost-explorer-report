@@ -26,7 +26,7 @@ A script, for local or lambda use, to generate CostExplorer excel graphs
 from __future__ import print_function
 
 __author__ = "David Faulkner"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT No Attribution"
 
 import boto3
@@ -44,6 +44,10 @@ from email.utils import COMMASPACE, formatdate
 
 #GLOBALS
 SES_REGION = os.environ.get('SES_REGION')
+AWS_BILLINGPROFILE = os.environ.get('AWS_BILLINGPROFILE')
+AWS_DEFAULT_REGION = os.environ.get('AWS_DEFAULT_REGION')
+if not AWS_DEFAULT_REGION:
+    AWS_DEFAULT_REGION="us-east-1"
 if not SES_REGION:
     SES_REGION="us-east-1"
 ACCOUNT_LABEL = os.environ.get('ACCOUNT_LABEL')
@@ -65,7 +69,11 @@ class CostExplorer:
     def __init__(self, CurrentMonth=False):
         #Array of reports ready to be output to Excel.
         self.reports = []
-        self.client = boto3.client('ce', region_name='us-east-1')
+        if not AWS_BILLINGPROFILE:
+            session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
+            self.client = session.client('ce', region_name=AWS_DEFAULT_REGION)
+        else : 
+            self.client = boto3.client('ce', region_name=AWS_DEFAULT_REGION)
         self.end = datetime.date.today().replace(day=1) - datetime.timedelta(days=1) # last day of last month
         self.riend = datetime.date.today()
         if CurrentMonth or CURRENT_MONTH:
@@ -80,7 +88,11 @@ class CostExplorer:
         
     def getAccounts(self):
         accounts = {}
-        client = boto3.client('organizations', region_name='us-east-1')
+        if not AWS_BILLINGPROFILE:
+            session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
+            client = session.client('organizations', region_name=AWS_DEFAULT_REGION)
+        else : 
+            client = boto3.client('organizations', region_name=AWS_DEFAULT_REGION)
         paginator = client.get_paginator('list_accounts')
         response_iterator = paginator.paginate()
         for response in response_iterator:
@@ -247,7 +259,11 @@ class CostExplorer:
         
         #Time to deliver the file to S3
         if os.environ.get('S3_BUCKET'):
-            s3 = boto3.client('s3')
+            if not AWS_BILLINGPROFILE:
+                session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
+                s3 = session.client('s3', region_name=AWS_DEFAULT_REGION)
+            else : 
+                s3 = boto3.client('s3')
             s3.upload_file("cost_explorer_report.xlsx", os.environ.get('S3_BUCKET'), "cost_explorer_report.xlsx")
         if os.environ.get('SES_SEND'):
             #Email logic
@@ -266,7 +282,11 @@ class CostExplorer:
             part['Content-Disposition'] = 'attachment; filename="%s"' % "cost_explorer_report.xlsx"
             msg.attach(part)
             #SES Sending
-            ses = boto3.client('ses', region_name=SES_REGION)
+            if not AWS_BILLINGPROFILE:
+                session = boto3.Session(profile_name=AWS_BILLINGPROFILE)
+                ses = session.client('ses', region_name=SES_REGION)
+            else : 
+                ses = boto3.client('ses', region_name=SES_REGION)
             result = ses.send_raw_email(
                 Source=msg['From'],
                 Destinations=os.environ.get('SES_SEND').split(","),
