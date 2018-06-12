@@ -26,11 +26,15 @@ A script, for local or lambda use, to generate CostExplorer excel graphs
 from __future__ import print_function
 
 __author__ = "David Faulkner"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT No Attribution"
 
-import boto3
 import os
+import sys
+# Required to load modules from vendored subfolder (for clean development env)
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "./vendored"))
+
+import boto3
 import datetime
 import logging
 import pandas as pd
