@@ -70,7 +70,7 @@ class CostExplorer:
         #Array of reports ready to be output to Excel.
         self.reports = []
         self.client = boto3.client('ce', region_name='us-east-1')
-        self.end = datetime.date.today().replace(day=1) - datetime.timedelta(days=1) # last day of last month
+        self.end = datetime.date.today().replace(day=1)# - datetime.timedelta(days=1) # last day of last month
         self.riend = datetime.date.today()
         if CurrentMonth or CURRENT_MONTH:
             self.end = self.riend

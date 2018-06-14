@@ -15,7 +15,7 @@ export CURRENT_MONTH=false
 
 if [ ! -f bin/lambda.zip ]; then
     echo "lambda.zip not found! Downloading one we prepared earlier"
-    wget -o bin/lambda.zip https://s3.amazonaws.com/aws-cost-explorer-report-bin/lambda.zip
+    curl https://s3.amazonaws.com/aws-cost-explorer-report-bin/lambda.zip --create-dirs -o bin/lambda.zip
 fi
 
 cd src
