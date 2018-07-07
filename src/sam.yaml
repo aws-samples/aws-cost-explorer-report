@@ -24,6 +24,10 @@ Parameters:
   CurrentMonth:
     Type: String
     Description: "true | false for if current partial month included"
+  DayOfMonth:
+    Type: Number
+    Default: 6
+    Description: "DayOfMonth for Schedule, default 6 - use 12 if you want to report refunds and finalised Enterprise Support."
 
 Resources:
   CostExplorerReport:
@@ -49,10 +53,11 @@ Resources:
           COST_TAGS: !Ref ListOfCostTags
           ACCOUNT_LABEL: !Ref AccountLabel
           CURRENT_MONTH: !Ref CurrentMonth
+          INC_SUPPORT: 'false'
       Events:
-        MonthlyEvent: # Run at 1am UTC, 4th of month (give bills a chance to finalise)
+        MonthlyEvent:
           Properties:
-            Schedule: cron(0 1 4 * ? *)
+            Schedule: !Sub cron(0 1 ${DayOfMonth} * ? *)
           Type: Schedule
   
   CostExplorerReportLambdaIAMRole:

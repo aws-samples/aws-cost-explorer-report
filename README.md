@@ -17,7 +17,7 @@ This sample code is made available under a modified MIT license. See the LICENSE
 * Amazon S3
   * Minimal usage
 * AWS Cost Explorer API calls   
-  * [$0.01 per API call (about 24 calls per run)](https://aws.amazon.com/aws-cost-management/pricing/)
+  * [$0.01 per API call (about 25 calls per run)](https://aws.amazon.com/aws-cost-management/pricing/)
 
 ## Prerequisites
 
@@ -53,6 +53,7 @@ Update the values in deploy.sh for your AWS account details.
   | SES_REGION    | SES Region                                             |
   | COST_TAGS     | List Of Cost Tag Keys (comma separated)                |
   | CURRENT_MONTH | true / false for if report does current partial month  |
+  | DAY_MONTH     | When to schedule a run. 6, for the 6th by default      |
 
 And then run `sh deploy.sh`
 
@@ -62,7 +63,7 @@ And then run `sh deploy.sh`
 2. Create a lambda IAM execution role with ce:, ses:, s3:, organizations:ListAccounts
 3. Upload zip to console from https://s3.amazonaws.com/aws-cost-explorer-report-bin/lambda.zip
 4. Update ENV Variables in Lambda console
-   * Detials in table above. 
+   * Details in table above. 
 5. Create a trigger (CloudWatch Event)
 
 ## Manually Running / Testing
@@ -73,31 +74,37 @@ You can create ANY test event (as the event content is ignored), and hit the tes
 https://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-test-function.html
 
 ## Customise the report
-Edit the `main_handler` segment of src/lambda.py
+Edit the `main_handler` segment of src/lambda.py  
 
 ```python
 def main_handler(event=None, context=None): 
-  costexplorer = CostExplorer(CurrentMonth=False)
-  #Default addReport has filter to remove Credits / Refunds / UpfrontRI
-  costexplorer.addReport(Name="Total", GroupBy=[],Style='Total')
-  costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
-  costexplorer.addReport(Name="TotalInclCredits", GroupBy=[],Style='Total',NoCredits=False)
-  costexplorer.addReport(Name="TotalInclCreditsChange", GroupBy=[],Style='Change',NoCredits=False)
-  costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
-  costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
-
-  costexplorer.addRiReport(Name="RICoverage")
-  costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total')
-  costexplorer.addReport(Name="ServicesChange", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Change')
-  costexplorer.addReport(Name="Accounts", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Total')
-  costexplorer.addReport(Name="AccountsChange", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Change')
-  costexplorer.addReport(Name="Regions", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Total')
-  costexplorer.addReport(Name="RegionsChange", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Change')
-  if os.environ.get('COST_TAGS'): #Support for multiple/different Cost Allocation tags
-      for tagkey in os.environ.get('COST_TAGS').split(','):
-          tabname = tagkey.replace(":",".") #Remove special chars from Excel tabname
-          costexplorer.addReport(Name="{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Total')
-          costexplorer.addReport(Name="Change-{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Change')
-  costexplorer.generateExcel()
-  return "Report Generated"
+    costexplorer = CostExplorer(CurrentMonth=False)
+    #Default addReport has filter to remove Support / Credits / Refunds / UpfrontRI
+    #Overall Billing Reports
+    costexplorer.addReport(Name="Total", GroupBy=[],Style='Total',IncSupport=True)
+    costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
+    costexplorer.addReport(Name="TotalInclCredits", GroupBy=[],Style='Total',NoCredits=False,IncSupport=True)
+    costexplorer.addReport(Name="TotalInclCreditsChange", GroupBy=[],Style='Change',NoCredits=False)
+    costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
+    costexplorer.addReport(Name="Refunds", GroupBy=[],Style='Total',RefundOnly=True)
+    costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
+    #GroupBy Reports
+    costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total',IncSupport=True)
+    costexplorer.addReport(Name="ServicesChange", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Change')
+    costexplorer.addReport(Name="Accounts", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Total')
+    costexplorer.addReport(Name="AccountsChange", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Change')
+    costexplorer.addReport(Name="Regions", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Total')
+    costexplorer.addReport(Name="RegionsChange", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Change')
+    if os.environ.get('COST_TAGS'): #Support for multiple/different Cost Allocation tags
+        for tagkey in os.environ.get('COST_TAGS').split(','):
+            tabname = tagkey.replace(":",".") #Remove special chars from Excel tabname
+            costexplorer.addReport(Name="{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Total')
+            costexplorer.addReport(Name="Change-{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Change')
+    #RI Reports
+    costexplorer.addRiReport(Name="RICoverage")
+    costexplorer.addRiReport(Name="RIUtilization")
+    costexplorer.addRiReport(Name="RIUtilizationSavings", Savings=True)
+    costexplorer.addRiReport(Name="RIRecommendation")
+    costexplorer.generateExcel()
+    return "Report Generated"
 ```

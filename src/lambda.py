@@ -26,7 +26,7 @@ A script, for local or lambda use, to generate CostExplorer excel graphs
 from __future__ import print_function
 
 __author__ = "David Faulkner"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __license__ = "MIT No Attribution"
 
 import os
@@ -60,6 +60,14 @@ if CURRENT_MONTH == "true":
 else:
     CURRENT_MONTH = False
 
+#Default exclude support, as for Enterprise Support
+#as support billing is finalised later in month so skews trends    
+INC_SUPPORT = os.environ.get('INC_SUPPORT')
+if INC_SUPPORT == "true":
+    INC_SUPPORT = True
+else:
+    INC_SUPPORT = False
+
 class CostExplorer:
     """Retrieves BillingInfo checks from CostExplorer API
     >>> costexplorer = CostExplorer()
@@ -70,12 +78,13 @@ class CostExplorer:
         #Array of reports ready to be output to Excel.
         self.reports = []
         self.client = boto3.client('ce', region_name='us-east-1')
-        self.end = datetime.date.today().replace(day=1)# - datetime.timedelta(days=1) # last day of last month
+        self.end = datetime.date.today().replace(day=1)
         self.riend = datetime.date.today()
         if CurrentMonth or CURRENT_MONTH:
             self.end = self.riend
-        self.start = (datetime.date.today() - relativedelta(months=+12)).replace(day=1) #1st day of month 11 months ago
+        self.start = (datetime.date.today() - relativedelta(months=+12)).replace(day=1) #1st day of month 12 months ago
         self.ristart = (datetime.date.today() - relativedelta(months=+11)).replace(day=1) #1st day of month 11 months ago
+        self.sixmonth = (datetime.date.today() - relativedelta(months=+6)).replace(day=1) #1st day of month 6 months ago, so RI util has savings values
         try:
             self.accounts = self.getAccounts()
         except:
@@ -92,48 +101,141 @@ class CostExplorer:
                 accounts[acc['Id']] = acc
         return accounts
     
-    def addRiReport(self, Name="RICoverage"):
-
-        results = []
-        response = self.client.get_reservation_coverage(
-            TimePeriod={
-                'Start': self.ristart.isoformat(),
-                'End': self.riend.isoformat()
-            },
-            Granularity='MONTHLY'
-        )
-        results.extend(response['CoveragesByTime'])
-        while 'nextToken' in response:
-            nextToken = response['nextToken']
+    def addRiReport(self, Name='RICoverage', Savings=False, PaymentOption='PARTIAL_UPFRONT', Service='Amazon Elastic Compute Cloud - Compute'): #Call with Savings True to get Utilization report in dollar savings
+        type = 'chart' #other option table
+        if Name == "RICoverage":
+            results = []
             response = self.client.get_reservation_coverage(
                 TimePeriod={
                     'Start': self.ristart.isoformat(),
                     'End': self.riend.isoformat()
                 },
-                Granularity='MONTHLY',
-                NextPageToken=nextToken
+                Granularity='MONTHLY'
             )
             results.extend(response['CoveragesByTime'])
-            if 'nextToken' in response:
+            while 'nextToken' in response:
                 nextToken = response['nextToken']
-            else:
-                nextToken = False
-        
-        rows = []
-        for v in response['CoveragesByTime']:
-            row = {'date':v['TimePeriod']['Start']}
-            row.update({'Coverage%':float(v['Total']['CoverageHours']['CoverageHoursPercentage'])})
-            rows.append(row)  
-                
-        df = pd.DataFrame(rows)#index=[i['date'] for i in rows]
-        df.set_index("date", inplace= True)
-        df = df.fillna(0.0)
-        df = df.T
-        self.reports.append({'Name':Name,'Data':df})
+                response = self.client.get_reservation_coverage(
+                    TimePeriod={
+                        'Start': self.ristart.isoformat(),
+                        'End': self.riend.isoformat()
+                    },
+                    Granularity='MONTHLY',
+                    NextPageToken=nextToken
+                )
+                results.extend(response['CoveragesByTime'])
+                if 'nextToken' in response:
+                    nextToken = response['nextToken']
+                else:
+                    nextToken = False
             
-        
+            rows = []
+            for v in results:
+                row = {'date':v['TimePeriod']['Start']}
+                row.update({'Coverage%':float(v['Total']['CoverageHours']['CoverageHoursPercentage'])})
+                rows.append(row)  
+                    
+            df = pd.DataFrame(rows)
+            df.set_index("date", inplace= True)
+            df = df.fillna(0.0)
+            df = df.T
+        elif Name in ['RIUtilization','RIUtilizationSavings']:
+            #Only Six month to support savings
+            results = []
+            response = self.client.get_reservation_utilization(
+                TimePeriod={
+                    'Start': self.sixmonth.isoformat(),
+                    'End': self.riend.isoformat()
+                },
+                Granularity='MONTHLY'
+            )
+            results.extend(response['UtilizationsByTime'])
+            while 'nextToken' in response:
+                nextToken = response['nextToken']
+                response = self.client.get_reservation_utilization(
+                    TimePeriod={
+                        'Start': self.sixmonth.isoformat(),
+                        'End': self.riend.isoformat()
+                    },
+                    Granularity='MONTHLY',
+                    NextPageToken=nextToken
+                )
+                results.extend(response['UtilizationsByTime'])
+                if 'nextToken' in response:
+                    nextToken = response['nextToken']
+                else:
+                    nextToken = False
+            
+            rows = []
+            if results:
+                for v in results:
+                    row = {'date':v['TimePeriod']['Start']}
+                    if Savings:
+                        row.update({'Savings$':float(v['Total']['NetRISavings'])})
+                    else:
+                        row.update({'Utilization%':float(v['Total']['UtilizationPercentage'])})
+                    rows.append(row)  
+                        
+                df = pd.DataFrame(rows)
+                df.set_index("date", inplace= True)
+                df = df.fillna(0.0)
+                df = df.T
+                type = 'chart'
+            else:
+                df = pd.DataFrame(rows)
+                type = 'table' #Dont try chart empty result
+        elif Name == 'RIRecommendation':
+            results = []
+            response = self.client.get_reservation_purchase_recommendation(
+                #AccountId='string', May use for Linked view
+                LookbackPeriodInDays='SIXTY_DAYS',
+                TermInYears='ONE_YEAR',
+                PaymentOption=PaymentOption,
+                Service=Service
+            )
+            results.extend(response['Recommendations'])
+            while 'nextToken' in response:
+                nextToken = response['nextToken']
+                response = self.client.get_reservation_purchase_recommendation(
+                    #AccountId='string', May use for Linked view
+                    LookbackPeriodInDays='SIXTY_DAYS',
+                    TermInYears='ONE_YEAR',
+                    PaymentOption=PaymentOption,
+                    Service=Service,
+                    NextPageToken=nextToken
+                )
+                results.extend(response['Recommendations'])
+                if 'nextToken' in response:
+                    nextToken = response['nextToken']
+                else:
+                    nextToken = False
+                
+            rows = []
+            for i in results:
+                for v in i['RecommendationDetails']:
+                    row = v['InstanceDetails'][list(v['InstanceDetails'].keys())[0]]
+                    row['Recommended']=v['RecommendedNumberOfInstancesToPurchase']
+                    row['Minimum']=v['MinimumNumberOfInstancesUsedPerHour']
+                    row['Maximum']=v['MaximumNumberOfInstancesUsedPerHour']
+                    row['Savings']=v['EstimatedMonthlySavingsAmount']
+                    row['OnDemand']=v['EstimatedMonthlyOnDemandCost']
+                    row['BreakEvenIn']=v['EstimatedBreakEvenInMonths']
+                    row['UpfrontCost']=v['UpfrontCost']
+                    row['MonthlyCost']=v['RecurringStandardMonthlyCost']
+                    rows.append(row)  
+                
+                    
+            df = pd.DataFrame(rows)
+            df = df.fillna(0.0)
+            type = 'table' #Dont try chart this
+        self.reports.append({'Name':Name,'Data':df, 'Type':type})
+            
+    def addLinkedReports(self, Name='RI_{}',PaymentOption='PARTIAL_UPFRONT'):
+        pass
+            
     def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], 
-    Style='Total', NoCredits=True, CreditsOnly=False, UpfrontOnly=False):
+    Style='Total', NoCredits=True, CreditsOnly=False, RefundOnly=False, UpfrontOnly=False, IncSupport=False):
+        type = 'chart' #other option table
         results = []
         if not NoCredits:
             response = self.client.get_cost_and_usage(
@@ -148,9 +250,13 @@ class CostExplorer:
                 GroupBy=GroupBy
             )
         else:
-            Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
+            Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront", "Support"]}}}
+            if INC_SUPPORT or IncSupport: #If global set for including support, we dont exclude it
+                Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
             if CreditsOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund"]}}
+                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit",]}}
+            if RefundOnly:
+                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
             if UpfrontOnly:
                 Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
             response = self.client.get_cost_and_usage(
@@ -188,11 +294,11 @@ class CostExplorer:
                     nextToken = response['nextToken']
                 else:
                     nextToken = False
-        # Now we should have all records, lets setup a waterfall datagrid
-        #{key:value for (key,value) in dictonary.items()}
         rows = []
+        sort = ''
         for v in results:
             row = {'date':v['TimePeriod']['Start']}
+            sort = v['TimePeriod']['Start']
             for i in v['Groups']:
                 key = i['Keys'][0]
                 if key in self.accounts:
@@ -202,7 +308,7 @@ class CostExplorer:
                 row.update({'Total':float(v['Total']['UnblendedCost']['Amount'])})
             rows.append(row)  
 
-        df = pd.DataFrame(rows)#index=[i['date'] for i in rows]
+        df = pd.DataFrame(rows)
         df.set_index("date", inplace= True)
         df = df.fillna(0.0)
         
@@ -218,9 +324,9 @@ class CostExplorer:
                             logging.exception("Error")
                             df.at[index,i] = 0
                 lastindex = index
-        df = df.T    
-        
-        self.reports.append({'Name':Name,'Data':df})
+        df = df.T
+        df = df.sort_values(sort, ascending=False)
+        self.reports.append({'Name':Name,'Data':df, 'Type':type})
         
         
     def generateExcel(self):
@@ -229,24 +335,27 @@ class CostExplorer:
         writer = pd.ExcelWriter('cost_explorer_report.xlsx', engine='xlsxwriter')
         workbook = writer.book
         for report in self.reports:
+            print(report['Name'],report['Type'])
             report['Data'].to_excel(writer, sheet_name=report['Name'])
             worksheet = writer.sheets[report['Name']]
-            
-            
-            # Create a chart object.
-            chart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
-            
-            chartend=12
-            if CURRENT_MONTH:
-                chartend=13
-            for row_num in range(1, len(report['Data']) + 1):
-                chart.add_series({
-                    'name':       [report['Name'], row_num, 0],
-                    'categories': [report['Name'], 0, 1, 0, chartend],
-                    'values':     [report['Name'], row_num, 1, row_num, chartend],
-                })
-            
-            worksheet.insert_chart('O2', chart)
+            if report['Type'] == 'chart':
+                
+                # Create a chart object.
+                chart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
+                
+                
+                chartend=12
+                if CURRENT_MONTH:
+                    chartend=13
+                for row_num in range(1, len(report['Data']) + 1):
+                    chart.add_series({
+                        'name':       [report['Name'], row_num, 0],
+                        'categories': [report['Name'], 0, 1, 0, chartend],
+                        'values':     [report['Name'], row_num, 1, row_num, chartend],
+                    })
+                chart.set_y_axis({'label_position': 'low'})
+                chart.set_x_axis({'label_position': 'low'})
+                worksheet.insert_chart('O2', chart, {'x_scale': 2.0, 'y_scale': 2.0})
         writer.save()
         
         #Time to deliver the file to S3
@@ -280,16 +389,17 @@ class CostExplorer:
 
 def main_handler(event=None, context=None): 
     costexplorer = CostExplorer(CurrentMonth=False)
-    #Default addReport has filter to remove Credits / Refunds / UpfrontRI
-    costexplorer.addReport(Name="Total", GroupBy=[],Style='Total')
+    #Default addReport has filter to remove Support / Credits / Refunds / UpfrontRI
+    #Overall Billing Reports
+    costexplorer.addReport(Name="Total", GroupBy=[],Style='Total',IncSupport=True)
     costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
-    costexplorer.addReport(Name="TotalInclCredits", GroupBy=[],Style='Total',NoCredits=False)
+    costexplorer.addReport(Name="TotalInclCredits", GroupBy=[],Style='Total',NoCredits=False,IncSupport=True)
     costexplorer.addReport(Name="TotalInclCreditsChange", GroupBy=[],Style='Change',NoCredits=False)
     costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
+    costexplorer.addReport(Name="Refunds", GroupBy=[],Style='Total',RefundOnly=True)
     costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
-
-    costexplorer.addRiReport(Name="RICoverage")
-    costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total')
+    #GroupBy Reports
+    costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total',IncSupport=True)
     costexplorer.addReport(Name="ServicesChange", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Change')
     costexplorer.addReport(Name="Accounts", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Total')
     costexplorer.addReport(Name="AccountsChange", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Change')
@@ -300,6 +410,11 @@ def main_handler(event=None, context=None):
             tabname = tagkey.replace(":",".") #Remove special chars from Excel tabname
             costexplorer.addReport(Name="{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Total')
             costexplorer.addReport(Name="Change-{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Change')
+    #RI Reports
+    costexplorer.addRiReport(Name="RICoverage")
+    costexplorer.addRiReport(Name="RIUtilization")
+    costexplorer.addRiReport(Name="RIUtilizationSavings", Savings=True)
+    costexplorer.addRiReport(Name="RIRecommendation") #Service supported value(s): Amazon Elastic Compute Cloud - Compute, Amazon Relational Database Service
     costexplorer.generateExcel()
     return "Report Generated"
 
