@@ -24,6 +24,7 @@ This sample code is made available under a modified MIT license. See the LICENSE
 * [awscli](https://aws.amazon.com/cli)
 * Configure AWS credentials for target account
   * run `aws configure` 
+* [Cost Explorer enabled](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-explorer-signup.html)
 * [Verfied Amazon SES Sender email](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-email-addresses.html)
 * If you verify an email, you can send from/to that address.
 * To send to other addresses, you need to [move SES out of sandbox mode](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/request-production-access.html).  
