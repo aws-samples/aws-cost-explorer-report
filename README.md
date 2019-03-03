@@ -55,6 +55,9 @@ Update the values in deploy.sh for your AWS account details.
   | COST_TAGS     | List Of Cost Tag Keys (comma separated)                |
   | CURRENT_MONTH | true / false for if report does current partial month  |
   | DAY_MONTH     | When to schedule a run. 6, for the 6th by default      |
+  | TAG_KEY       | Provide tag key e.g. Name                              |
+  | TAG_VALUE_FILTER       | Provide tag value to filter e.g. Prod*        |
+  | LAST_MONTH_ONLY         | Specify true if you wish to generate for only last month  |
 
 And then run `sh deploy.sh`
 
