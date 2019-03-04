@@ -261,30 +261,37 @@ class CostExplorer:
                 GroupBy=GroupBy
             )
         else:
-            Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront", "Support"]}}}
-            if INC_SUPPORT or IncSupport: #If global set for including support, we dont exclude it
-                Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
-            if CreditsOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit",]}}
-            if RefundOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
-            if UpfrontOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
+            Filter = {"And": []}
 
+            Dimensions={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront", "Support"]}}}
+            if INC_SUPPORT or IncSupport: #If global set for including support, we dont exclude it
+                Dimensions={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
+            if CreditsOnly:
+                Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit",]}}
+            if RefundOnly:
+                Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
+            if UpfrontOnly:
+                Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
+
+            tagValues = None
             if TAG_KEY:
                 tagValues = self.client.get_tags(
                     SearchString=TAG_VALUE_FILTER,
                     TimePeriod = {
                         'Start': self.start.isoformat(),
-                        'End': self.end.isoformat()
+                        'End': datetime.date.today().isoformat()
                     },
                     TagKey=TAG_KEY
                 )
 
+            if tagValues:
+                Filter["And"].append(Dimensions)
                 if len(tagValues["Tags"]) > 0:
-                    Tags = {'Tags': {'Key': TAG_KEY, 'Values': tagValues["Tags"]}}
-                    Filter.update(Tags)
-    
+                    Tags = {"Tags": {"Key": TAG_KEY, "Values": tagValues["Tags"]}}
+                    Filter["And"].append(Tags)
+            else:
+                Filter = Dimensions.copy()
+
             response = self.client.get_cost_and_usage(
                 TimePeriod={
                     'Start': self.start.isoformat(),
@@ -300,7 +307,7 @@ class CostExplorer:
 
         if response:
             results.extend(response['ResultsByTime'])
-            
+     
             while 'nextToken' in response:
                 nextToken = response['nextToken']
                 response = self.client.get_cost_and_usage(
@@ -315,6 +322,7 @@ class CostExplorer:
                     GroupBy=GroupBy,
                     NextPageToken=nextToken
                 )
+     
                 results.extend(response['ResultsByTime'])
                 if 'nextToken' in response:
                     nextToken = response['nextToken']
