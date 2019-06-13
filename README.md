@@ -30,17 +30,8 @@ This sample code is made available under a modified MIT license. See the LICENSE
  
 Docker (optional for building the lambda python package with updated https://pypi.python.org/ third-party libraries)
 
-## Building (Optional, or use the prebuilt zip in /bin)
-Run build.sh to build a new lambda deployment package.
-This requires Docker, as it builds the package in an Amazon Linux container.
-
-`sh build.sh`
-
-## Deploying (SAM Application Repository)
-
-Coming soon...
-
-
+## Easy Deploy (us-east-1 only)
+If you do not need to modify the code, just deploy the included easy_deploy.yaml using AWS Cloudformation via the console.
 
 ## Deploying (SAM / Script)
 Update the values in deploy.sh for your AWS account details.  
@@ -59,19 +50,25 @@ And then run `sh deploy.sh`
 
 ## Deploy Manually (Lambda Console)
 
-1. Create a lambda function (python 3.6 runtime)
+1. Create a lambda function (python 3.6 runtime), and update the code to the contents of src/lambda.py
 2. Create a lambda IAM execution role with ce:, ses:, s3:, organizations:ListAccounts
-3. Upload zip to console from https://s3.amazonaws.com/aws-cost-explorer-report-bin/lambda.zip
+3. Configure the dependency layer: arn:aws:lambda:us-east-1:749981256976:layer:aws-cost-explorer-report:1
 4. Update ENV Variables in Lambda console
    * Details in table above. 
 5. Create a trigger (CloudWatch Event)
 
-## Manually Running / Testing
+## Running / Testing
 
 Once the Lambda is created, find it in the AWS Lambda console.
 You can create ANY test event (as the event content is ignored), and hit the test button for a manual run.
 
 https://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-test-function.html
+
+## Building the Lambda Layer (Optional, for if you want to build your own AWS Lambda layer for use with the script)
+Run build.sh to build a new AWS lambda layer with the required Python libraries.
+This requires Docker, as it builds the package in an Amazon Linux container.
+
+`sh build.sh`
 
 ## Customise the report
 Edit the `main_handler` segment of src/lambda.py  

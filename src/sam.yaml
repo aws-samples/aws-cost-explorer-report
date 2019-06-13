@@ -40,6 +40,8 @@ Resources:
       Handler: lambda.main_handler
       Runtime: python3.6
       CodeUri: ../bin/lambda.zip
+      Layers:
+        - arn:aws:lambda:us-east-1:749981256976:layer:aws-cost-explorer-report:1
       Role: !GetAtt CostExplorerReportLambdaIAMRole.Arn
       Environment:
         Variables:

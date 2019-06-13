@@ -15,11 +15,6 @@ export CURRENT_MONTH=false
 #Day of Month, leave as 6 unless you want to capture refunds and final support values, then change to 12
 export DAY_MONTH=6
 
-if [ ! -f bin/lambda.zip ]; then
-    echo "lambda.zip not found! Downloading one we prepared earlier"
-    curl https://s3.amazonaws.com/aws-cost-explorer-report-bin/lambda.zip --create-dirs -o bin/lambda.zip
-fi
-
 cd src
 zip -ur ../bin/lambda.zip lambda.py
 cd ..
