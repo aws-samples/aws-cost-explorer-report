@@ -26,7 +26,7 @@ A script, for local or lambda use, to generate CostExplorer excel graphs
 from __future__ import print_function
 
 __author__ = "David Faulkner"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __license__ = "MIT No Attribution"
 
 import os
@@ -60,6 +60,8 @@ if CURRENT_MONTH == "true":
 else:
     CURRENT_MONTH = False
 
+LAST_MONTH_ONLY = os.environ.get("LAST_MONTH_ONLY")
+
 #Default exclude support, as for Enterprise Support
 #as support billing is finalised later in month so skews trends    
 INC_SUPPORT = os.environ.get('INC_SUPPORT')
@@ -67,6 +69,9 @@ if INC_SUPPORT == "true":
     INC_SUPPORT = True
 else:
     INC_SUPPORT = False
+
+TAG_VALUE_FILTER = os.environ.get('TAG_VALUE_FILTER') or '*'
+TAG_KEY = os.environ.get('TAG_KEY')
 
 class CostExplorer:
     """Retrieves BillingInfo checks from CostExplorer API
@@ -82,7 +87,13 @@ class CostExplorer:
         self.riend = datetime.date.today()
         if CurrentMonth or CURRENT_MONTH:
             self.end = self.riend
-        self.start = (datetime.date.today() - relativedelta(months=+12)).replace(day=1) #1st day of month 12 months ago
+
+        if LAST_MONTH_ONLY:
+            self.start = (datetime.date.today() - relativedelta(months=+1)).replace(day=1) #1st day of month a month ago
+        else:
+            # Default is last 12 months
+            self.start = (datetime.date.today() - relativedelta(months=+12)).replace(day=1) #1st day of month 12 months ago
+    
         self.ristart = (datetime.date.today() - relativedelta(months=+11)).replace(day=1) #1st day of month 11 months ago
         self.sixmonth = (datetime.date.today() - relativedelta(months=+6)).replace(day=1) #1st day of month 6 months ago, so RI util has savings values
         try:
@@ -250,15 +261,37 @@ class CostExplorer:
                 GroupBy=GroupBy
             )
         else:
-            Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront", "Support"]}}}
+            Filter = {"And": []}
+
+            Dimensions={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront", "Support"]}}}
             if INC_SUPPORT or IncSupport: #If global set for including support, we dont exclude it
-                Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
+                Dimensions={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
             if CreditsOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit",]}}
+                Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit",]}}
             if RefundOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
+                Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
             if UpfrontOnly:
-                Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
+                Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
+
+            tagValues = None
+            if TAG_KEY:
+                tagValues = self.client.get_tags(
+                    SearchString=TAG_VALUE_FILTER,
+                    TimePeriod = {
+                        'Start': self.start.isoformat(),
+                        'End': datetime.date.today().isoformat()
+                    },
+                    TagKey=TAG_KEY
+                )
+
+            if tagValues:
+                Filter["And"].append(Dimensions)
+                if len(tagValues["Tags"]) > 0:
+                    Tags = {"Tags": {"Key": TAG_KEY, "Values": tagValues["Tags"]}}
+                    Filter["And"].append(Tags)
+            else:
+                Filter = Dimensions.copy()
+
             response = self.client.get_cost_and_usage(
                 TimePeriod={
                     'Start': self.start.isoformat(),
@@ -274,7 +307,7 @@ class CostExplorer:
 
         if response:
             results.extend(response['ResultsByTime'])
-            
+     
             while 'nextToken' in response:
                 nextToken = response['nextToken']
                 response = self.client.get_cost_and_usage(
@@ -289,6 +322,7 @@ class CostExplorer:
                     GroupBy=GroupBy,
                     NextPageToken=nextToken
                 )
+     
                 results.extend(response['ResultsByTime'])
                 if 'nextToken' in response:
                     nextToken = response['nextToken']
