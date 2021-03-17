@@ -46,8 +46,6 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref Table
-      Environment:
-        Variables:
           S3_BUCKET: !Ref S3Bucket
           SES_SEND: !Ref SESSendTo
           SES_FROM: !Ref SESSendFrom
