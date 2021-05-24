@@ -54,9 +54,9 @@ And then run `sh deploy.sh`
 
 ## Deploy Manually (Lambda Console)
 
-1. Create a lambda function (python 3.6 runtime), and update the code to the contents of src/lambda.py
+1. Create a lambda function (python 3.8 runtime), and update the code to the contents of src/lambda.py
 2. Create a lambda IAM execution role with ce:, ses:, s3:, organizations:ListAccounts
-3. Configure the dependency layer: arn:aws:lambda:us-east-1:749981256976:layer:aws-cost-explorer-report:1
+3. Configure the dependency layer: arn:aws:lambda:us-east-1:749981256976:layer:CostExplorerReportLayer:1
 4. Update ENV Variables in Lambda console
    * Details in table above. 
 5. Create a trigger (CloudWatch Event)
