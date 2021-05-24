@@ -3,7 +3,7 @@
 export AWS_DEFAULT_REGION=us-east-1 
 #Change the below, an s3 bucket to store lambda code for deploy, and output report
 #Must be in same region as lambda (ie AWS_DEFAULT_REGION)
-export BUCKET=changeme
+export BUCKET=CHANGEME_THIS_IS_NOT_A_VALID_S3_BUCKET
 #Comma Seperated list of emails to send to
 export SES_TO=email@test.com,email2@test.com
 export SES_FROM=email@test.com
@@ -14,6 +14,12 @@ export COST_TAGS=CostGroup
 export CURRENT_MONTH=false
 #Day of Month, leave as 6 unless you want to capture refunds and final support values, then change to 12
 export DAY_MONTH=6
+
+if [ ! -f bin/lambda.zip ]; then
+    echo "lambda.zip not found! Downloading one we prepared earlier"
+    curl -L https://aws-cost-explorer-report-release.s3.amazonaws.com/lambda.zip --create-dirs -o bin/lambda.zip
+    curl -L https://aws-cost-explorer-report-release.s3.amazonaws.com/layer.zip --create-dirs -o bin/layer.zip
+fi
 
 cd src
 zip -ur ../bin/lambda.zip lambda.py

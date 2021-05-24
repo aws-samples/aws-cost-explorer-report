@@ -30,6 +30,15 @@ Parameters:
     Description: "DayOfMonth for Schedule, default 6 - use 12 if you want to report refunds and finalised Enterprise Support."
 
 Resources:
+  CostExplorerReportLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: ../bin/layer.zip
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      BuildMethod: python3.8
+  
   CostExplorerReport:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -38,14 +47,13 @@ Resources:
       MemorySize: 256
       Timeout: 60
       Handler: lambda.main_handler
-      Runtime: python3.6
+      Runtime: python3.8
       CodeUri: ../bin/lambda.zip
       Layers:
-        - arn:aws:lambda:us-east-1:749981256976:layer:aws-cost-explorer-report:1
+        - !Ref CostExplorerReportLayer
       Role: !GetAtt CostExplorerReportLambdaIAMRole.Arn
       Environment:
         Variables:
-          TABLE_NAME: !Ref Table
           S3_BUCKET: !Ref S3Bucket
           SES_SEND: !Ref SESSendTo
           SES_FROM: !Ref SESSendFrom

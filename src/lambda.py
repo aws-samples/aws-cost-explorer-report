@@ -445,10 +445,13 @@ def main_handler(event=None, context=None):
             costexplorer.addReport(Name="{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Total')
             costexplorer.addReport(Name="Change-{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Change')
     #RI Reports
-    costexplorer.addRiReport(Name="RICoverage")
-    costexplorer.addRiReport(Name="RIUtilization")
-    costexplorer.addRiReport(Name="RIUtilizationSavings", Savings=True)
-    costexplorer.addRiReport(Name="RIRecommendation") #Service supported value(s): Amazon Elastic Compute Cloud - Compute, Amazon Relational Database Service
+    try:
+        costexplorer.addRiReport(Name="RICoverage")
+        costexplorer.addRiReport(Name="RIUtilization")
+        costexplorer.addRiReport(Name="RIUtilizationSavings", Savings=True)
+        costexplorer.addRiReport(Name="RIRecommendation") #Service supported value(s): Amazon Elastic Compute Cloud - Compute, Amazon Relational Database Service
+    except Exception:
+        pass #Don't fail if account doesnt have any RI use
     costexplorer.generateExcel()
     return "Report Generated"
 
