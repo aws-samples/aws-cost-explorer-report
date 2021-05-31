@@ -70,6 +70,13 @@ if INC_SUPPORT == "true":
 else:
     INC_SUPPORT = False
 
+#Default include taxes    
+INC_TAX = os.environ.get('INC_TAX')
+if INC_TAX == "false":
+    INC_TAX = False
+else:
+    INC_TAX = True
+
 TAG_VALUE_FILTER = os.environ.get('TAG_VALUE_FILTER') or '*'
 TAG_KEY = os.environ.get('TAG_KEY')
 
@@ -245,7 +252,7 @@ class CostExplorer:
         pass
             
     def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], 
-    Style='Total', NoCredits=True, CreditsOnly=False, RefundOnly=False, UpfrontOnly=False, IncSupport=False):
+    Style='Total', NoCredits=True, CreditsOnly=False, RefundOnly=False, UpfrontOnly=False, IncSupport=False, IncTax=True):
         type = 'chart' #other option table
         results = []
         if not NoCredits:
@@ -272,6 +279,8 @@ class CostExplorer:
                 Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
             if UpfrontOnly:
                 Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
+            if "Not" in Dimensions and (not INC_TAX or not IncTax): #If filtering Record_Types and Tax excluded
+                Dimensions["Not"]["Dimensions"]["Values"].append("Tax")
 
             tagValues = None
             if TAG_KEY:
@@ -423,7 +432,7 @@ class CostExplorer:
 
 def main_handler(event=None, context=None): 
     costexplorer = CostExplorer(CurrentMonth=False)
-    #Default addReport has filter to remove Support / Credits / Refunds / UpfrontRI
+    #Default addReport has filter to remove Support / Credits / Refunds / UpfrontRI / Tax
     #Overall Billing Reports
     costexplorer.addReport(Name="Total", GroupBy=[],Style='Total',IncSupport=True)
     costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')

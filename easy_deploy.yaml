@@ -73,6 +73,7 @@ Resources:
           CURRENT_MONTH:
             Ref: CurrentMonth
           INC_SUPPORT: 'false'
+          INC_TAX: 'true'
       Events:
         MonthlyEvent:
           Properties:

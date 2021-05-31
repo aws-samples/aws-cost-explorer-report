@@ -62,7 +62,8 @@ Resources:
           ACCOUNT_LABEL: !Ref AccountLabel
           CURRENT_MONTH: !Ref CurrentMonth
           INC_SUPPORT: 'false'
-      Events:
+          INC_TAX: 'true'
+     Events:
         MonthlyEvent:
           Properties:
             Schedule: !Sub cron(0 1 ${DayOfMonth} * ? *)
