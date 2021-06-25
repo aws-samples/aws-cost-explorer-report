@@ -252,7 +252,7 @@ class CostExplorer:
         pass
             
     def addReport(self, Name="Default",GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"},], 
-    Style='Total', NoCredits=True, CreditsOnly=False, RefundOnly=False, UpfrontOnly=False, IncSupport=False, IncTax=True):
+    Style='Total', NoCredits=True, CreditsOnly=False, RefundOnly=False, UpfrontOnly=False, IncSupport=False, IncTax=True, DimensionCriteria=[]):
         type = 'chart' #other option table
         results = []
         if not NoCredits:
@@ -281,6 +281,7 @@ class CostExplorer:
                 Dimensions={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
             if "Not" in Dimensions and (not INC_TAX or not IncTax): #If filtering Record_Types and Tax excluded
                 Dimensions["Not"]["Dimensions"]["Values"].append("Tax")
+                
 
             tagValues = None
             if TAG_KEY:
@@ -292,14 +293,18 @@ class CostExplorer:
                     },
                     TagKey=TAG_KEY
                 )
-
-            if tagValues:
+            
+            if DimensionCriteria or tagValues:
                 Filter["And"].append(Dimensions)
+                
+            if DimensionCriteria:            
+                Filter["And"].append(DimensionCriteria)
+            elif tagValues:
                 if len(tagValues["Tags"]) > 0:
                     Tags = {"Tags": {"Key": TAG_KEY, "Values": tagValues["Tags"]}}
                     Filter["And"].append(Tags)
             else:
-                Filter = Dimensions.copy()
+                Filter = Dimensions.copy()                
 
             response = self.client.get_cost_and_usage(
                 TimePeriod={
@@ -444,7 +449,7 @@ def main_handler(event=None, context=None):
     #GroupBy Reports
     costexplorer.addReport(Name="Services", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Total',IncSupport=True)
     costexplorer.addReport(Name="ServicesChange", GroupBy=[{"Type": "DIMENSION","Key": "SERVICE"}],Style='Change')
-    costexplorer.addReport(Name="Accounts", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Total')
+    costexplorer.addReport(Name="Accounts", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Total',DimensionCriteria={"Dimensions": {"Key": "REGION","Values": ["us-east-1",]}})
     costexplorer.addReport(Name="AccountsChange", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Change')
     costexplorer.addReport(Name="Regions", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Total')
     costexplorer.addReport(Name="RegionsChange", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Change')
