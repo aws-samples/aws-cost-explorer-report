@@ -379,6 +379,10 @@ class CostExplorer:
         workbook = writer.book
         for report in self.reports:
             print(report['Name'],report['Type'])
+            if (report['Data']).index.any() == f"{(report['Name'])}$":
+                print(f"Dropping {(report['Name'])}$ Index")
+                (report['Data']).drop(index=f"{(report['Name'])}$", inplace=True)
+                    
             report['Data'].to_excel(writer, sheet_name=report['Name'])
             worksheet = writer.sheets[report['Name']]
             if report['Type'] == 'chart':
