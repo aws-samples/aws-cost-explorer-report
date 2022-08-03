@@ -45,8 +45,11 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
+from dotenv import load_dotenv # for local testing support
+import re
 
 #GLOBALS
+load_dotenv()
 SES_REGION = os.environ.get('SES_REGION')
 if not SES_REGION:
     SES_REGION="us-east-1"
@@ -378,24 +381,40 @@ class CostExplorer:
         writer = pd.ExcelWriter('cost_explorer_report.xlsx', engine='xlsxwriter')
         workbook = writer.book
         for report in self.reports:
+            if report['Data'].empty:
+                print(f"{(report['Name'])} dataframe is empty")
+                continue
+            
             print(report['Name'],report['Type'])
-            report['Data'].to_excel(writer, sheet_name=report['Name'])
-            worksheet = writer.sheets[report['Name']]
+            
             if report['Type'] == 'chart':
+                for tag in os.environ.get('COST_TAGS').split(','):
+                    if tag in report['Name']:
+                        (report['Data']).drop(index=f"{tag}$", inplace=True)
+                        
+                        for indexname in report['Data'].index:
+                            newindex = re.split(r"\$([\s\S]*)", indexname)
+                            (report['Data']).rename(index={indexname: newindex[1]}, inplace=True)
+                    
+                report['Data'].to_excel(writer, sheet_name=report['Name'])
+                worksheet = writer.sheets[report['Name']]
                 
                 # Create a chart object.
                 chart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
                 
-                
                 chartend=12
                 if CURRENT_MONTH:
                     chartend=13
-                for row_num in range(1, len(report['Data']) + 1):
+
+                i = 0
+                while i <= (int(str(os.environ.get('LEGENDLENGTH'))) - 1):
+                    i = i + 1
                     chart.add_series({
-                        'name':       [report['Name'], row_num, 0],
+                        'name':       [report['Name'], i, 0],
                         'categories': [report['Name'], 0, 1, 0, chartend],
-                        'values':     [report['Name'], row_num, 1, row_num, chartend],
-                    })
+                        'values':     [report['Name'], i, 1, i, chartend],
+                    })                
+
                 chart.set_y_axis({'label_position': 'low'})
                 chart.set_x_axis({'label_position': 'low'})
                 worksheet.insert_chart('O2', chart, {'x_scale': 2.0, 'y_scale': 2.0})
